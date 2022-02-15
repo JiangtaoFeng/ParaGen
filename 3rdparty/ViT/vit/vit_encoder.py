@@ -7,7 +7,7 @@ from paragen.modules.encoders.layers.transformer_encoder_layer import Transforme
 
 
 @register_encoder
-class ImageTransformerEncoder(nn.Module):
+class ImageTransformerEncoder(AbstractEncoder):
     """
     TransformerEncoder is a transformer encoder.
 
