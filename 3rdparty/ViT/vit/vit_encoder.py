@@ -71,7 +71,8 @@ class ImageTransformerEncoder(AbstractEncoder):
         """
         Build computational modules.
         """
-        self._embed = nn.Linear(self._patch_dim, self._d_model)
+        # self._embed = nn.Linear(self._patch_dim, self._d_model)
+        self._map = nn.Linear(3072, self._d_model)
         # self._h_pos_embed = nn.Parameter(torch.randn(self._num_patch_h, self._d_model))
         # self._w_pos_embed = nn.Parameter(torch.randn(self._num_patch_w, self._d_model))
         # self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
@@ -117,11 +118,10 @@ class ImageTransformerEncoder(AbstractEncoder):
         #     x = self._norm(x)
 
         bsz = img.shape[0]
-        img = img.reshape(bsz, self._num_patch_h, self._patch_size, self._num_patch_w, self._patch_size, 3)
-        img = img.transpose(2, 3).reshape(bsz, self._num_patch_h * self._num_patch_w, self._patch_dim)
-        x = self._embed(img)
-        x = x.transpose(0, 1)
-        return None, x.mean(dim=0)
+        x = img.reshape(bsz, -1)
+        x = self._map(x)
+
+        return None, x
         # return x[1:], x[0]
 
     @property

@@ -37,15 +37,13 @@ class ViTModel(AbstractModel):
         """
         Build encoder with vocabulary size and special tokens
         """
-        # self._encoder = create_encoder(self._encoder_config)
-        # self._encoder.build()
-        pass
+        self._encoder = create_encoder(self._encoder_config)
+        self._encoder.build()
 
     def _build_classifier(self):
         """
         Build classifer on label space
         """
-        self._map = LinearClassifier(3072, self.encoder.out_dim)
         self._classifier = LinearClassifier(self.encoder.out_dim, self._labels)
 
     @property
@@ -66,10 +64,7 @@ class ViTModel(AbstractModel):
         Returns:
             - log probability of labels
         """
-        # _, x = self.encoder(input)
-        bsz = input.shape[0]
-        x = input.reshape(bsz, -1)
-        x = self._map(x)
+        _, x = self.encoder(input)
         logits = self.classifier(x)
         return logits
 
