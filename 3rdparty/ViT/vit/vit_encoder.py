@@ -25,9 +25,6 @@ class ImageTransformerEncoder(AbstractEncoder):
     """
 
     def __init__(self,
-                 height,
-                 width,
-                 patch_size,
                  num_layers,
                  d_model=512,
                  n_head=8,
@@ -41,12 +38,6 @@ class ImageTransformerEncoder(AbstractEncoder):
                  max_pos=1024,
                  name=None):
         super().__init__()
-        self._height, self._width = height, width
-        self._patch_size = patch_size
-        assert self._height % self._patch_size == 0 and self._width % self._patch_size == 0
-        self._num_patch_h, self._num_patch_w = self._height // self._patch_size, self._width // self._patch_size
-        self._num_patch = self._num_patch_h * self._num_patch_w
-        self._patch_dim = self._patch_size ** 2 * 3
         self._num_layers = num_layers
         self._d_model = d_model
         self._n_head = n_head
@@ -71,13 +62,6 @@ class ImageTransformerEncoder(AbstractEncoder):
         """
         Build computational modules.
         """
-        # self._embed = nn.Linear(self._patch_dim, self._d_model)
-        self._map = nn.Linear(3072, self._d_model)
-        # self._h_pos_embed = nn.Parameter(torch.randn(self._num_patch_h, self._d_model))
-        # self._w_pos_embed = nn.Parameter(torch.randn(self._num_patch_w, self._d_model))
-        # self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
-        # self._embed_dropout = nn.Dropout(self._dropout)
-        # self._cls_token = nn.Parameter(torch.randn(1, 1, self._d_model))
         # self._layers = nn.ModuleList([TransformerEncoderLayer(d_model=self._d_model,
         #                                                       nhead=self._n_head,
         #                                                       dim_feedforward=self._dim_feedforward,
@@ -88,10 +72,10 @@ class ImageTransformerEncoder(AbstractEncoder):
         #                               for _ in range(self._num_layers)])
         # self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
 
-    def _forward(self, img: Tensor):
+    def _forward(self, x: Tensor):
         r"""
         Args:
-            img: tokens in src side.
+            x: tokens in src side.
               :math:`(N, H, W, 3)` where N is the batch size, H is the image height, W is the image width and 3 is the rgb channel.
 
         Outputs:
@@ -99,30 +83,13 @@ class ImageTransformerEncoder(AbstractEncoder):
               :math:`(S, N, E)` where S is the source sequence length, N is the batch size,
               E is the embedding size.
         """
-        # bsz = img.shape[0]
-        # img = img.reshape(bsz, self._num_patch_h, self._patch_size, self._num_patch_w, self._patch_size, 3)
-        # img = img.transpose(2, 3).reshape(bsz, self._num_patch_h, self._num_patch_w, self._patch_dim)
-        # x = self._embed(img)
-        # x = x + self._h_pos_embed[None, :, None, :] + self._w_pos_embed[None, None, :, :]
-        # x = x.reshape(bsz, self._num_patch, self._d_model)
-        # x = torch.cat([self._cls_token.repeat((bsz, 1, 1)), x], dim=1)
-        # if self._embed_norm is not None:
-        #     x = self._embed_norm(x)
-        # x = self._embed_dropout(x)
-        #
         # x = x.transpose(0, 1)
         # for layer in self._layers:
         #     x = layer(x)
         #
         # if self._norm is not None:
         #     x = self._norm(x)
-
-        bsz = img.shape[0]
-        x = img.reshape(bsz, -1)
-        x = self._map(x)
-
-        return None, x
-        # return x[1:], x[0]
+        return None, x.mean(dim=1)
 
     @property
     def d_model(self):
