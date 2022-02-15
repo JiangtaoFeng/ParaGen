@@ -62,15 +62,15 @@ class ImageTransformerEncoder(AbstractEncoder):
         """
         Build computational modules.
         """
-        # self._layers = nn.ModuleList([TransformerEncoderLayer(d_model=self._d_model,
-        #                                                       nhead=self._n_head,
-        #                                                       dim_feedforward=self._dim_feedforward,
-        #                                                       dropout=self._dropout,
-        #                                                       attention_dropout=self._attention_dropout,
-        #                                                       activation=self._activation,
-        #                                                       normalize_before=self._normalize_before)
-        #                               for _ in range(self._num_layers)])
-        # self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
+        self._layers = nn.ModuleList([TransformerEncoderLayer(d_model=self._d_model,
+                                                              nhead=self._n_head,
+                                                              dim_feedforward=self._dim_feedforward,
+                                                              dropout=self._dropout,
+                                                              attention_dropout=self._attention_dropout,
+                                                              activation=self._activation,
+                                                              normalize_before=self._normalize_before)
+                                      for _ in range(self._num_layers)])
+        self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
 
     def forward(self, x: Tensor):
         r"""
@@ -83,13 +83,14 @@ class ImageTransformerEncoder(AbstractEncoder):
               :math:`(S, N, E)` where S is the source sequence length, N is the batch size,
               E is the embedding size.
         """
-        # x = x.transpose(0, 1)
-        # for layer in self._layers:
-        #     x = layer(x)
-        #
-        # if self._norm is not None:
-        #     x = self._norm(x)
-        return x
+        x = x.transpose(0, 1)
+        for layer in self._layers:
+            x = layer(x)
+
+        if self._norm is not None:
+            x = self._norm(x)
+
+        return x[0]
 
     @property
     def d_model(self):

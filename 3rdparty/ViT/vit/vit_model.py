@@ -79,7 +79,7 @@ class ViTModel(AbstractModel):
             - log probability of labels
         """
         x = self._embed(input)
-        x = self._encoder(x.mean(dim=1))
+        x = self._encoder(x)
         logits = self.classifier(x)
         return logits
 
