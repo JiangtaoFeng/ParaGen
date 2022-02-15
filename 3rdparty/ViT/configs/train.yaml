@@ -28,7 +28,8 @@ task:
       n_head: 8
       dim_feedforward: 512
       dropout: 0.1
-      activation: 'relu'
+      activation: 'gelu'
+      normalize_before: True
     height: 32
     width: 32
     patch_size: 4

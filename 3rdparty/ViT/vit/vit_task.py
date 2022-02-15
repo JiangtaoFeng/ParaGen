@@ -1,5 +1,7 @@
 from typing import Dict
 
+from timm.data import create_transform
+
 from paragen.criteria import create_criterion
 from paragen.models import create_model
 from paragen.tasks import register_task
@@ -12,8 +14,26 @@ from paragen.utils.tensor import create_tensor, convert_tensor_to_idx
 class ViTTask(BaseTask):
 
     def __init__(self,
+                 img_size,
+                 color_jitter=0.4,
+                 auto_augment='rand-m9-mstd0.5-inc1',
+                 reprob=0.25,
+                 remode='pixel',
+                 recount=1,
+                 interpolation='bicubic',
                  **kwargs):
         super(ViTTask, self).__init__(**kwargs)
+
+        self._transform = create_transform(
+            input_size=img_size,
+            is_training=True,
+            color_jitter=color_jitter if color_jitter > 0 else None,
+            auto_augment=auto_augment if auto_augment != 'none' else None,
+            re_prob=reprob,
+            re_mode=remode,
+            re_count=recount,
+            interpolation=interpolation,
+        )
 
     def _build_models(self):
         """
