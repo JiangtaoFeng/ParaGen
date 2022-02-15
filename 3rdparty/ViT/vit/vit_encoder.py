@@ -7,7 +7,7 @@ from paragen.modules.encoders.layers.transformer_encoder_layer import Transforme
 
 
 @register_encoder
-class ImageTransformerEncoder(AbstractEncoder):
+class ImageTransformerEncoder(nn.Module):
     """
     TransformerEncoder is a transformer encoder.
 
@@ -72,7 +72,7 @@ class ImageTransformerEncoder(AbstractEncoder):
         #                               for _ in range(self._num_layers)])
         # self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
 
-    def _forward(self, x: Tensor):
+    def forward(self, x: Tensor):
         r"""
         Args:
             x: tokens in src side.
