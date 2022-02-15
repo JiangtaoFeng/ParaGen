@@ -79,7 +79,7 @@ class ViTModel(AbstractModel):
             - log probability of labels
         """
         x = self._embed(input)
-        # _, x = self.encoder(x)
+        x = self.encoder(x)
         logits = self.classifier(x)
         return logits
 
@@ -115,5 +115,4 @@ class Embedding2D(nn.Module):
         if self._embed_norm is not None:
             x = self._embed_norm(x)
         x = self._embed_dropout(x)
-        x = x.mean(dim=1)
         return x

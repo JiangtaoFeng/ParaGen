@@ -89,7 +89,7 @@ class ImageTransformerEncoder(AbstractEncoder):
         #
         # if self._norm is not None:
         #     x = self._norm(x)
-        return None, x.mean(dim=1)
+        return x.mean(dim=1)
 
     @property
     def d_model(self):
