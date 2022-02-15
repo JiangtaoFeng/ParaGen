@@ -72,20 +72,20 @@ class ImageTransformerEncoder(AbstractEncoder):
         Build computational modules.
         """
         self._embed = nn.Linear(self._patch_dim, self._d_model)
-        self._h_pos_embed = nn.Parameter(torch.randn(self._num_patch_h, self._d_model))
-        self._w_pos_embed = nn.Parameter(torch.randn(self._num_patch_w, self._d_model))
-        self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
-        self._embed_dropout = nn.Dropout(self._dropout)
-        self._cls_token = nn.Parameter(torch.randn(1, 1, self._d_model))
-        self._layers = nn.ModuleList([TransformerEncoderLayer(d_model=self._d_model,
-                                                              nhead=self._n_head,
-                                                              dim_feedforward=self._dim_feedforward,
-                                                              dropout=self._dropout,
-                                                              attention_dropout=self._attention_dropout,
-                                                              activation=self._activation,
-                                                              normalize_before=self._normalize_before)
-                                      for _ in range(self._num_layers)])
-        self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
+        # self._h_pos_embed = nn.Parameter(torch.randn(self._num_patch_h, self._d_model))
+        # self._w_pos_embed = nn.Parameter(torch.randn(self._num_patch_w, self._d_model))
+        # self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
+        # self._embed_dropout = nn.Dropout(self._dropout)
+        # self._cls_token = nn.Parameter(torch.randn(1, 1, self._d_model))
+        # self._layers = nn.ModuleList([TransformerEncoderLayer(d_model=self._d_model,
+        #                                                       nhead=self._n_head,
+        #                                                       dim_feedforward=self._dim_feedforward,
+        #                                                       dropout=self._dropout,
+        #                                                       attention_dropout=self._attention_dropout,
+        #                                                       activation=self._activation,
+        #                                                       normalize_before=self._normalize_before)
+        #                               for _ in range(self._num_layers)])
+        # self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
 
     def _forward(self, img: Tensor):
         r"""
@@ -121,8 +121,8 @@ class ImageTransformerEncoder(AbstractEncoder):
         img = img.transpose(2, 3).reshape(bsz, self._num_patch_h * self._num_patch_w, self._patch_dim)
         x = self._embed(img)
         x = x.transpose(0, 1)
-
-        return x[1:], x[0]
+        return x.mean(dim=0)
+        # return x[1:], x[0]
 
     @property
     def d_model(self):
