@@ -121,7 +121,7 @@ class ImageTransformerEncoder(AbstractEncoder):
         img = img.transpose(2, 3).reshape(bsz, self._num_patch_h * self._num_patch_w, self._patch_dim)
         x = self._embed(img)
         x = x.transpose(0, 1)
-        return x.mean(dim=0)
+        return None, x.mean(dim=0)
         # return x[1:], x[0]
 
     @property
