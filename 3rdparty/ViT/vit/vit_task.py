@@ -5,7 +5,7 @@ from paragen.models import create_model
 from paragen.tasks import register_task
 from paragen.tasks.base_task import BaseTask
 from paragen.utils.data import reorganize
-from paragen.utils.tensor import create_tensor
+from paragen.utils.tensor import create_tensor, convert_tensor_to_idx
 
 
 @register_task
@@ -32,14 +32,23 @@ class ViTTask(BaseTask):
     def _collate(self, samples: Dict, is_training=False) -> Dict:
         samples = reorganize(samples)
         images, labels = samples['image'], samples['label']
-        images = create_tensor(images, float)
-        labels = create_tensor(labels, int)
+        images_t = create_tensor(images, float)
+        labels_t = create_tensor(labels, int)
         batch = {
             'net_input': {
-                'input': images
+                'input': images_t
             },
             'net_output': {
-                'target': labels
+                'target': labels_t
             }
         }
+        if self._infering:
+            batch['text_output'] = labels
         return batch
+
+    def _output_collate_fn(self, outputs, *args, **kwargs):
+        outputs = convert_tensor_to_idx(outputs)
+        processed_outputs = []
+        for output in outputs:
+            processed_outputs.append(output)
+        return processed_outputs
