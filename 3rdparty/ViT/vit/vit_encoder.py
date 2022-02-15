@@ -61,9 +61,11 @@ class ImageTransformerEncoder(AbstractEncoder):
         self._max_pos = max_pos
 
         self._special_tokens = None
-        self._embed, self._h_pos_embed, self._w_pos_embed, self._embed_norm, self._embed_dropout, self._norm = None, None, None, None, None, None
-        self._cls_token = nn.Parameter(torch.randn(1, 1, d_model))
-        self._layer, self._layers = None, None
+        self._embed, self._h_pos_embed, self._w_pos_embed = None, None, None
+        self._embed_norm, self._embed_dropout = None, None
+        self._cls_token = None
+        self._layers = None
+        self._norm = None
 
     def build(self):
         """
@@ -74,6 +76,7 @@ class ImageTransformerEncoder(AbstractEncoder):
         self._w_pos_embed = nn.Parameter(torch.randn(self._num_patch_w, self._d_model))
         self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
         self._embed_dropout = nn.Dropout(self._dropout)
+        self._cls_token = nn.Parameter(torch.randn(1, 1, self._d_model))
         self._layers = nn.ModuleList([TransformerEncoderLayer(d_model=self._d_model,
                                                               nhead=self._n_head,
                                                               dim_feedforward=self._dim_feedforward,
@@ -98,7 +101,6 @@ class ImageTransformerEncoder(AbstractEncoder):
         bsz = img.shape[0]
         img = img.reshape(bsz, self._num_patch_h, self._patch_size, self._num_patch_w, self._patch_size, 3)
         img = img.transpose(2, 3).reshape(bsz, self._num_patch_h, self._num_patch_w, self._patch_dim)
-        print(img.size())
         x = self._embed(img)
         x = x + self._h_pos_embed[None, :, None, :] + self._w_pos_embed[None, None, :, :]
         x = x.reshape(bsz, self._num_patch, self._d_model)

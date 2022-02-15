@@ -59,4 +59,4 @@ task:
         class: Accuracy
 env:
   device: cuda
-#  fp16: True
+  fp16: True
