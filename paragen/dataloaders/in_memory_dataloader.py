@@ -27,6 +27,7 @@ class InMemoryDataLoader(AbstractDataLoader):
                  cached_samples: List = None,
                  collate_fn=None,
                  post_collate_fn=None,
+                 no_cache=True,
                  **kwargs):
         super().__init__(dataset,
                          sampler=None,
@@ -34,13 +35,15 @@ class InMemoryDataLoader(AbstractDataLoader):
                          collate_fn=collate_fn,
                          post_collate_fn=post_collate_fn,
                          **kwargs)
-        if cached_samples is None:
-            self._cached_samples = []
-            self._has_cached_samples = False
-        else:
-            logger.info(f'cached samples (size={len(cached_samples)}) detected, skip init')
-            self._cached_samples = cached_samples
-            self._has_cached_samples = True
+        self._no_cache = no_cache
+        if not self._no_cache:
+            if cached_samples is None:
+                self._cached_samples = []
+                self._has_cached_samples = False
+            else:
+                logger.info(f'cached samples (size={len(cached_samples)}) detected, skip init')
+                self._cached_samples = cached_samples
+                self._has_cached_samples = True
         self._sampler = sampler
         self._kwargs = kwargs
 
@@ -57,7 +60,7 @@ class InMemoryDataLoader(AbstractDataLoader):
         Returns:
             dataloader (paragen.dataloaders.AbstractDataLoader): re-build a new DataLoader with possibly new collate_fn
         """
-        if len(self._cached_samples) > 0:
+        if not self._no_cache and len(self._cached_samples) > 0:
             self.dataset.finalize()
             self._sampler.finalize()
             self._has_cached_samples = True
@@ -70,6 +73,7 @@ class InMemoryDataLoader(AbstractDataLoader):
                                       cached_samples=None,
                                       collate_fn=self.collate_fn,
                                       post_collate_fn=self._post_collate_fn,
+                                      no_cache=self._no_cache,
                                       **self._kwargs)
 
     def step_update(self, step, states=None):
@@ -99,7 +103,7 @@ class InMemoryDataLoader(AbstractDataLoader):
         Returns:
             samples: a list of sample with `post_collate` process
         """
-        if self._has_cached_samples:
+        if not self._no_cache and self._has_cached_samples:
             from paragen.samplers.bucket_sampler import BucketSampler
             if self._sampler.__class__ is BucketSampler or \
                 (self._sampler.__class__ is DistributedSampler and
