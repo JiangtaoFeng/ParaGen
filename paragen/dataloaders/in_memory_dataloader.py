@@ -27,7 +27,7 @@ class InMemoryDataLoader(AbstractDataLoader):
                  cached_samples: List = None,
                  collate_fn=None,
                  post_collate_fn=None,
-                 no_cache=True,
+                 use_cache=False,
                  **kwargs):
         super().__init__(dataset,
                          sampler=None,
@@ -35,14 +35,14 @@ class InMemoryDataLoader(AbstractDataLoader):
                          collate_fn=collate_fn,
                          post_collate_fn=post_collate_fn,
                          **kwargs)
-        self._no_cache = no_cache
-        if self._no_cache or cached_samples is None:
-            self._cached_samples = []
-            self._has_cached_samples = False
-        else:
+        self._use_cache = use_cache
+        if self._use_cache and cached_samples is not None:
             logger.info(f'cached samples (size={len(cached_samples)}) detected, skip init')
             self._cached_samples = cached_samples
             self._has_cached_samples = True
+        else:
+            self._cached_samples = []
+            self._has_cached_samples = False
         self._sampler = sampler
         self._kwargs = kwargs
 
@@ -72,7 +72,7 @@ class InMemoryDataLoader(AbstractDataLoader):
                                       cached_samples=None,
                                       collate_fn=self.collate_fn,
                                       post_collate_fn=self._post_collate_fn,
-                                      no_cache=self._no_cache,
+                                      use_cache=self._use_cache,
                                       **self._kwargs)
 
     def step_update(self, step, states=None):
@@ -114,7 +114,7 @@ class InMemoryDataLoader(AbstractDataLoader):
         else:
             for samples in super().__iter__():
                 samples = self._callback(samples)
-                if not self._no_cache:
+                if self._use_cache:
                     self._cached_samples.append(samples)
                 yield samples
 
