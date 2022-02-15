@@ -36,14 +36,13 @@ class InMemoryDataLoader(AbstractDataLoader):
                          post_collate_fn=post_collate_fn,
                          **kwargs)
         self._no_cache = no_cache
-        if not self._no_cache:
-            if cached_samples is None:
-                self._cached_samples = []
-                self._has_cached_samples = False
-            else:
-                logger.info(f'cached samples (size={len(cached_samples)}) detected, skip init')
-                self._cached_samples = cached_samples
-                self._has_cached_samples = True
+        if self._no_cache or cached_samples is None:
+            self._cached_samples = []
+            self._has_cached_samples = False
+        else:
+            logger.info(f'cached samples (size={len(cached_samples)}) detected, skip init')
+            self._cached_samples = cached_samples
+            self._has_cached_samples = True
         self._sampler = sampler
         self._kwargs = kwargs
 
@@ -60,7 +59,7 @@ class InMemoryDataLoader(AbstractDataLoader):
         Returns:
             dataloader (paragen.dataloaders.AbstractDataLoader): re-build a new DataLoader with possibly new collate_fn
         """
-        if not self._no_cache and len(self._cached_samples) > 0:
+        if len(self._cached_samples) > 0:
             self.dataset.finalize()
             self._sampler.finalize()
             self._has_cached_samples = True
@@ -103,7 +102,7 @@ class InMemoryDataLoader(AbstractDataLoader):
         Returns:
             samples: a list of sample with `post_collate` process
         """
-        if not self._no_cache and self._has_cached_samples:
+        if self._has_cached_samples:
             from paragen.samplers.bucket_sampler import BucketSampler
             if self._sampler.__class__ is BucketSampler or \
                 (self._sampler.__class__ is DistributedSampler and
@@ -114,8 +113,10 @@ class InMemoryDataLoader(AbstractDataLoader):
                 yield samples
         else:
             for samples in super().__iter__():
-                self._cached_samples.append(self._callback(samples))
-                yield self._cached_samples[-1]
+                samples = self._callback(samples)
+                if not self._no_cache:
+                    self._cached_samples.append(samples)
+                yield samples
 
     def finalize(self):
         """
