@@ -98,23 +98,29 @@ class ImageTransformerEncoder(AbstractEncoder):
               :math:`(S, N, E)` where S is the source sequence length, N is the batch size,
               E is the embedding size.
         """
+        # bsz = img.shape[0]
+        # img = img.reshape(bsz, self._num_patch_h, self._patch_size, self._num_patch_w, self._patch_size, 3)
+        # img = img.transpose(2, 3).reshape(bsz, self._num_patch_h, self._num_patch_w, self._patch_dim)
+        # x = self._embed(img)
+        # x = x + self._h_pos_embed[None, :, None, :] + self._w_pos_embed[None, None, :, :]
+        # x = x.reshape(bsz, self._num_patch, self._d_model)
+        # x = torch.cat([self._cls_token.repeat((bsz, 1, 1)), x], dim=1)
+        # if self._embed_norm is not None:
+        #     x = self._embed_norm(x)
+        # x = self._embed_dropout(x)
+        #
+        # x = x.transpose(0, 1)
+        # for layer in self._layers:
+        #     x = layer(x)
+        #
+        # if self._norm is not None:
+        #     x = self._norm(x)
+
         bsz = img.shape[0]
         img = img.reshape(bsz, self._num_patch_h, self._patch_size, self._num_patch_w, self._patch_size, 3)
-        img = img.transpose(2, 3).reshape(bsz, self._num_patch_h, self._num_patch_w, self._patch_dim)
+        img = img.transpose(2, 3).reshape(bsz, self._num_patch_h * self._num_patch_w, self._patch_dim)
         x = self._embed(img)
-        x = x + self._h_pos_embed[None, :, None, :] + self._w_pos_embed[None, None, :, :]
-        x = x.reshape(bsz, self._num_patch, self._d_model)
-        x = torch.cat([self._cls_token.repeat((bsz, 1, 1)), x], dim=1)
-        if self._embed_norm is not None:
-            x = self._embed_norm(x)
-        x = self._embed_dropout(x)
-
         x = x.transpose(0, 1)
-        for layer in self._layers:
-            x = layer(x)
-
-        if self._norm is not None:
-            x = self._norm(x)
 
         return x[1:], x[0]
 
