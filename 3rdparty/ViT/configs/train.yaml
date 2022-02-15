@@ -6,12 +6,12 @@ task:
       class: InMemoryDataLoader
       sampler:
         class: ShuffleSampler
-        max_samples: 4
+        max_samples: 128
     test:
       class: InMemoryDataLoader
       sampler:
         class: SequentialSampler
-        max_samples: 4
+        max_samples: 128
   data:
     train:
       class: ImageDataset
