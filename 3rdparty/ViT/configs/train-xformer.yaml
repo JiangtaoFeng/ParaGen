@@ -23,7 +23,7 @@ task:
   model:
     class: ViTModel
     encoder:
-      class: ImageTransformerEncoder
+      class: ImageXformerEncoder
       xformer_type: Former
       num_layers: 6
       d_model: 128
