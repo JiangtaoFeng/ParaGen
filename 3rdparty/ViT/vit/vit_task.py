@@ -56,7 +56,7 @@ class ViTTask(BaseTask):
         if self._training:
             images = [self._transform(img) for img in images]
             images = torch.cat([img.unsqueeze(0) for img in images], dim=0)
-            images_t = images.transpose(0, 1).transpose(1, 2).contiguous()
+            images_t = images.transpose(1, 2).transpose(2, 3).contiguous()
         else:
             images_t = create_tensor(images, float)
         labels_t = create_tensor(labels, int)
