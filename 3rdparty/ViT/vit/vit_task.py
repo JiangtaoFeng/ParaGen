@@ -52,9 +52,10 @@ class ViTTask(BaseTask):
     def _collate(self, samples: Dict, is_training=False) -> Dict:
         samples = reorganize(samples)
         images, labels = samples['image'], samples['label']
-        images = [self._transform(img) for img in images]
         images_t = create_tensor(images, float)
         labels_t = create_tensor(labels, int)
+        if is_training:
+            images_t = self._transform(images_t)
         batch = {
             'net_input': {
                 'input': images_t
