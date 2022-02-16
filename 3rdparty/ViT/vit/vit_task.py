@@ -1,6 +1,8 @@
 from typing import Dict
 
 from timm.data import create_transform
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from torchvision import transforms
 import torch
 
 from paragen.criteria import create_criterion
@@ -25,7 +27,7 @@ class ViTTask(BaseTask):
                  **kwargs):
         super(ViTTask, self).__init__(**kwargs)
 
-        self._transform = create_transform(
+        self._transform_aug = create_transform(
             input_size=img_size,
             is_training=True,
             color_jitter=color_jitter if color_jitter > 0 else None,
@@ -35,6 +37,10 @@ class ViTTask(BaseTask):
             re_count=recount,
             interpolation=interpolation,
         )
+        self._transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD)
+        ])
 
     def _build_models(self):
         """
@@ -54,11 +60,11 @@ class ViTTask(BaseTask):
         samples = reorganize(samples)
         images, labels = samples['image'], samples['label']
         if self._training:
-            images = [self._transform(img) for img in images]
-            images = torch.cat([img.unsqueeze(0) for img in images], dim=0)
-            images_t = images.transpose(1, 2).transpose(2, 3).contiguous()
+            images = [self._transform_aug(img) for img in images]
         else:
-            images_t = create_tensor(images, float)
+            images = [self._transform(img) for img in images]
+        images = torch.cat([img.unsqueeze(0) for img in images], dim=0)
+        images_t = images.transpose(1, 2).transpose(2, 3).contiguous()
         labels_t = create_tensor(labels, int)
         batch = {
             'net_input': {
