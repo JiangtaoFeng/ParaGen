@@ -1,6 +1,7 @@
 from typing import Dict
 
 from timm.data import create_transform
+import torch
 
 from paragen.criteria import create_criterion
 from paragen.models import create_model
@@ -52,10 +53,13 @@ class ViTTask(BaseTask):
     def _collate(self, samples: Dict) -> Dict:
         samples = reorganize(samples)
         images, labels = samples['image'], samples['label']
-        images_t = create_tensor(images, float)
-        labels_t = create_tensor(labels, int)
         if self._training:
-            images_t = self._transform(images_t)
+            images = [self._transform(img) for img in images]
+            images = torch.cat([img.unsqueeze(0) for img in images])
+            images_t = images.transpose(0, 1).transpose(1, 2).contiguous()
+        else:
+            images_t = create_tensor(images, float)
+        labels_t = create_tensor(labels, int)
         batch = {
             'net_input': {
                 'input': images_t

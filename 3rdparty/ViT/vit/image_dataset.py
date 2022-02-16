@@ -44,11 +44,10 @@ class ImageDataset(InMemoryDataset):
 
     def _callback(self, sample):
         image, label = sample
-        with Image.open(image) as im:
-            return {
-                'image': np.asarray(im) / 256.,
-                'label': eval(label)
-            }
+        return {
+            'image': Image.open(image),
+            'label': eval(label)
+        }
 
 
 if __name__ == '__main__':
