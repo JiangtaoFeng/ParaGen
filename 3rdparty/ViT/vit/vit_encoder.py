@@ -1,5 +1,4 @@
 from torch import Tensor
-import torch
 import torch.nn as nn
 
 from paragen.modules.encoders import AbstractEncoder, register_encoder
