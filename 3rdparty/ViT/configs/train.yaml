@@ -1,6 +1,7 @@
 task:
   class: ViTTask
   mode: train
+  img_size: 32
   dataloader:
     train:
       class: InMemoryDataLoader
@@ -52,6 +53,7 @@ task:
     max_steps: 100000
     validate_interval_epoch: 1
     assess_by: test.acc
+    no_best_avg: True
     save_model_dir: checkpoints
   generator:
     class: Generator
