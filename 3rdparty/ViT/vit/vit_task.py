@@ -49,12 +49,12 @@ class ViTTask(BaseTask):
         self._criterion = create_criterion(self._criterion_configs)
         self._criterion.build(self._model)
 
-    def _collate(self, samples: Dict, is_training=False) -> Dict:
+    def _collate(self, samples: Dict) -> Dict:
         samples = reorganize(samples)
         images, labels = samples['image'], samples['label']
         images_t = create_tensor(images, float)
         labels_t = create_tensor(labels, int)
-        if is_training:
+        if self._training:
             images_t = self._transform(images_t)
         batch = {
             'net_input': {
