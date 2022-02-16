@@ -55,7 +55,7 @@ task:
     validate_interval_epoch: 1
     assess_by: test.acc
     no_best_avg: True
-    save_model_dir: checkpoints
+    save_model_dir: checkpoints-xformers
   generator:
     class: Generator
   evaluator:
