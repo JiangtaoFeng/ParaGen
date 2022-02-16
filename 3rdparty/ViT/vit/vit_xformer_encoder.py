@@ -132,7 +132,7 @@ class XformerEncoderLayer(AbstractEncoderLayer):
                  normalize_before=False,):
         super(XformerEncoderLayer, self).__init__()
         self.normalize_before = normalize_before
-        mod = importlib.import_module('torch.optim')
+        mod = importlib.import_module('efficient_attention')
         cls = getattr(mod, xformer_type)
         self.self_attn = cls(d_model, nhead, dropout=attention_dropout)
         # Implementation of Feedforward model
