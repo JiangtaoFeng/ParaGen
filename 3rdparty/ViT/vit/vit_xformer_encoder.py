@@ -134,7 +134,7 @@ class XformerEncoderLayer(AbstractEncoderLayer):
         self.normalize_before = normalize_before
         mod = importlib.import_module('efficient_attention')
         cls = getattr(mod, xformer_type)
-        self.self_attn = cls(d_model, nhead, dropout=attention_dropout)
+        self.self_attn = cls(embed_dim=d_model, num_heads=nhead, dropout=attention_dropout)
         # Implementation of Feedforward model
         self.ffn = FFN(d_model, dim_feedforward=dim_feedforward, activation=activation)
 
