@@ -148,36 +148,30 @@ class XformerEncoderLayer(AbstractEncoderLayer):
         self.dropout2 = nn.Dropout(dropout)
 
     def forward(self,
-                src: Tensor,
-                src_mask: Optional[Tensor] = None,
-                src_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+                x: Tensor,
+                ) -> Tensor:
         r"""Pass the input through the encoder layer.
 
         Args:
-            src: the sequence to the encoder layer (required).
+            x: the sequence to the encoder layer (required).
                 :math:`(S, B, D)`, where S is sequence length, B is batch size and D is feature dimension
-            src_mask: the attention mask for the src sequence (optional).
-                :math:`(S, S)`, where S is sequence length.
-            src_key_padding_mask: the mask for the src keys per batch (optional).
-                :math: `(B, S)`, where B is batch size and S is sequence length
         """
-        residual = src
+        residual = x
         if self.normalize_before:
-            src = self.self_attn_norm(src)
-        src = self.self_attn(src, src, src, attn_mask=src_mask,
-                             key_padding_mask=src_key_padding_mask)[0]
-        src = self.dropout1(src)
-        src = residual + src
+            x = self.self_attn_norm(x)
+        x = self.self_attn(x)[0]
+        x = self.dropout1(x)
+        x = residual + x
         if not self.normalize_before:
-            src = self.self_attn_norm(src)
+            x = self.self_attn_norm(x)
 
-        residual = src
+        residual = x
         if self.normalize_before:
-            src = self.ffn_norm(src)
-        src = self.ffn(src)
-        src = self.dropout2(src)
-        src = residual + src
+            x = self.ffn_norm(x)
+        x = self.ffn(x)
+        x = self.dropout2(x)
+        x = residual + x
         if not self.normalize_before:
-            src = self.ffn_norm(src)
-        return src
+            x = self.ffn_norm(x)
+        return x
 
