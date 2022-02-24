@@ -17,8 +17,8 @@ class CosineAnnealingRateScheduler(AbstractRateScheduler):
     def __init__(self,
                  max_rate,
                  warmup_steps=0.,
-                 min_rate=0,
-                 total_steps=-1):
+                 min_rate=0.,
+                 total_steps=-1.):
         super().__init__(0.)
         self._max_rate = max_rate
         self._min_rate = min_rate
@@ -37,5 +37,5 @@ class CosineAnnealingRateScheduler(AbstractRateScheduler):
         if step < self._warmup_steps:
             self._rate = (self._max_rate - self._min_rate) / self._warmup_steps * step
         else:
-            step -= self._warmup_steps + 0.
+            step -= self._warmup_steps
             self._rate = self._min_rate + 0.5 * (self._max_rate - self._min_rate) * (1 + math.cos(step / self._total_steps * math.pi))
