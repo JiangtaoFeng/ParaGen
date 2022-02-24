@@ -40,7 +40,8 @@ class ImageXformerEncoder(AbstractEncoder):
                  normalize_before=False,
                  embed_layer_norm=False,
                  max_pos=1024,
-                 name=None):
+                 name=None,
+                 **kwargs,):
         super().__init__()
         self._num_layers = num_layers
         self._xformer_type = xformer_type
@@ -55,6 +56,7 @@ class ImageXformerEncoder(AbstractEncoder):
         self._name = name
         self._embed_layer_norm = embed_layer_norm
         self._max_pos = max_pos
+        self._kwargs = kwargs
 
         self._special_tokens = None
         self._embed, self._h_pos_embed, self._w_pos_embed = None, None, None
@@ -74,7 +76,8 @@ class ImageXformerEncoder(AbstractEncoder):
                                                           dropout=self._dropout,
                                                           attention_dropout=self._attention_dropout,
                                                           activation=self._activation,
-                                                          normalize_before=self._normalize_before)
+                                                          normalize_before=self._normalize_before,
+                                                          **self._kwargs)
                                       for _ in range(self._num_layers)])
         self._norm = nn.LayerNorm(self._d_model) if self._normalize_before else None
 
@@ -129,12 +132,13 @@ class XformerEncoderLayer(AbstractEncoderLayer):
                  dropout=0.1,
                  attention_dropout=0.,
                  activation="relu",
-                 normalize_before=False,):
+                 normalize_before=False,
+                 **kwargs):
         super(XformerEncoderLayer, self).__init__()
         self.normalize_before = normalize_before
         mod = importlib.import_module('efficient_attention')
         cls = getattr(mod, xformer_type)
-        self.self_attn = cls(embed_dim=d_model, num_heads=nhead, dropout=attention_dropout)
+        self.self_attn = cls(embed_dim=d_model, num_heads=nhead, dropout=attention_dropout, **kwargs)
         # Implementation of Feedforward model
         self.ffn = FFN(d_model, dim_feedforward=dim_feedforward, activation=activation)
 
