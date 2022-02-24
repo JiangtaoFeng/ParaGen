@@ -37,5 +37,5 @@ class CosineAnnealingRateScheduler(AbstractRateScheduler):
         if step < self._warmup_steps:
             self._rate = (self._max_rate - self._min_rate) / self._warmup_steps * step
         else:
-            step -= self._warmup_steps
+            step -= self._warmup_steps + 0.
             self._rate = self._min_rate + 0.5 * (self._max_rate - self._min_rate) * (1 + math.cos(step / self._total_steps * math.pi))
