@@ -35,8 +35,8 @@ task:
       normalize_before: True
       height: 8
       width: 8
-      npatch_h: 5
-      npatch_w: 5
+      npatch_h: 3
+      npatch_w: 3
     height: 32
     width: 32
     patch_size: 4
