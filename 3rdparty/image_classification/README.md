@@ -2,9 +2,10 @@
 
 ## Cifar-100
 
-| Task     | top-1 Acc (%) |
-|----------|---------------|
-| resnet50 | 60.8          |
+| Task        | top-1 Acc (%) |
+|-------------|---------------|
+| resnet50    | 60.8          |
+| densenet161 | 67.8          |
 
 Download CIFAR-100 from https://www.cs.toronto.edu/~kriz/cifar.html.
 
