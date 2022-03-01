@@ -2,10 +2,8 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from paragen.modules.decoders import AbstractDecoder, register_decoder
-from paragen.modules.layers.bert_layer_norm import BertLayerNorm
 from paragen.modules.layers.sinusoidal_positional_embedding import SinusoidalPositionalEmbedding
 from paragen.modules.layers.learned_positional_embedding import LearnedPositionalEmbedding
 from paragen.modules.decoders.layers.nonauto_transformer_decoder_layer import NonAutoTransformerDecoderLayer
@@ -24,6 +22,7 @@ class NonAutoTransformerDecoder(AbstractDecoder):
         dropout: dropout rate
         activation: activation function used in feed-forward network
         learn_pos: learning postional embedding instead of sinusoidal one
+        cat_pos: concat positional embedding with token embedding following CMLMC(https://openreview.net/pdf?id=I2Hw58KHp8O)
         normalize_before: use pre-norm fashion, default as post-norm.
             Pre-norm suit deep nets while post-norm achieve better results when nets are shallow.
         output_bias: add bias at output projection
@@ -39,6 +38,7 @@ class NonAutoTransformerDecoder(AbstractDecoder):
                  attention_dropout=0.,
                  activation='relu',
                  learn_pos=False,
+                 cat_pos=False,
                  normalize_before=False,
                  output_bias=False,
                  embed_layer_norm=False,
@@ -53,6 +53,7 @@ class NonAutoTransformerDecoder(AbstractDecoder):
         self._attention_dropout = attention_dropout
         self._activation = activation
         self._learn_pos = learn_pos
+        self._cat_pos = cat_pos
         self._normalize_before = normalize_before
         self._output_bias = output_bias
         self._embed_layer_norm = embed_layer_norm
@@ -61,6 +62,7 @@ class NonAutoTransformerDecoder(AbstractDecoder):
 
         self._special_tokens = None
         self._embed, self._pos_embed, self._embed_norm, self._embed_dropout, self._norm = None, None, None, None, None
+        self._embed_proj = None
         self._layer, self._layers = None, None
         self._out_proj = None
         self._out_proj_bias = None
@@ -85,6 +87,8 @@ class NonAutoTransformerDecoder(AbstractDecoder):
                                                          embedding_dim=self._d_model)
         else:
             self._pos_embed = SinusoidalPositionalEmbedding(self._d_model)
+        if self._cat_pos:
+            self._embed_proj = nn.Linear(self._d_model * 2, self._d_model)
         self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
         self._embed_dropout = nn.Dropout(self._dropout)
         if self._share_layers:
@@ -132,8 +136,11 @@ class NonAutoTransformerDecoder(AbstractDecoder):
         """
         x = tgt
         if self._pos_embed is not None:
-            pos_embed = self._pos_embed(tgt_padding_mask.long())
-            x = x + pos_embed
+            pos = self._pos_embed(tgt_padding_mask.long())
+            if self._cat_pos:
+                x = self._embed_proj(torch.cat([x, pos], dim=-1))
+            else:
+                x = x + pos
         if self._embed_norm is not None:
             x = self._embed_norm(x)
         x = self._embed_dropout(x)

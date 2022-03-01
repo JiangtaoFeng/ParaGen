@@ -1,4 +1,5 @@
 from torch import Tensor
+import torch
 import torch.nn as nn
 
 from paragen.modules.encoders import AbstractEncoder, register_encoder
@@ -20,6 +21,7 @@ class TransformerEncoder(AbstractEncoder):
         dropout: dropout rate
         activation: activation function used in feed-forward network
         learn_pos: learning postional embedding instead of sinusoidal one
+        cat_pos: concat positional embedding with token embedding following CMLMC(https://openreview.net/pdf?id=I2Hw58KHp8O)
         return_seed: return with sequence representation
         normalize_before: use pre-norm fashion, default as post-norm.
             Pre-norm suit deep nets while post-norm achieve better results when nets are shallow.
@@ -36,6 +38,7 @@ class TransformerEncoder(AbstractEncoder):
                  activation='relu',
                  return_seed=False,
                  learn_pos=False,
+                 cat_pos=False,
                  normalize_before=False,
                  embed_scale=True,
                  embed_layer_norm=False,
@@ -58,10 +61,12 @@ class TransformerEncoder(AbstractEncoder):
         self._embed_scale = d_model ** .5 if embed_scale else None
         self._embed_layer_norm = embed_layer_norm
         self._max_pos = max_pos
+        self._cat_pos = cat_pos
         self._share_layers = share_layers
 
         self._special_tokens = None
         self._embed, self._pos_embed, self._embed_norm, self._embed_dropout, self._norm = None, None, None, None, None
+        self._embed_proj = None
         self._layer, self._layers = None, None
         self._pool_seed = None
         self._position_emb_post_mask = position_emb_post_mask
@@ -83,6 +88,8 @@ class TransformerEncoder(AbstractEncoder):
                                                          post_mask=self._position_emb_post_mask)
         else:
             self._pos_embed = SinusoidalPositionalEmbedding(self._d_model)
+        if self._cat_pos:
+            self._embed_proj = nn.Linear(self._d_model * 2, self._d_model)
         self._embed_norm = nn.LayerNorm(self._d_model) if self._embed_layer_norm else None
         self._embed_dropout = nn.Dropout(self._dropout)
         if self._share_layers:
@@ -120,7 +127,11 @@ class TransformerEncoder(AbstractEncoder):
         if self._embed_scale is not None:
             x = x * self._embed_scale
         if self._pos_embed is not None:
-            x = x + self._pos_embed(src)
+            pos = self._pos_embed(src)
+            if self._cat_pos:
+                x = self._embed_proj(torch.cat([x, pos], dim=-1))
+            else:
+                x = x + pos
         if self._embed_norm is not None:
             x = self._embed_norm(x)
         x = self._embed_dropout(x)
