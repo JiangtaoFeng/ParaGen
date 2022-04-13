@@ -36,11 +36,11 @@ def setup_registry(registry, base_cls, force_extend=True):
         """
         name = cls.__name__.lower()
         if name in MODULE_REGISTRY[registry]:
-            raise ValueError('Cannot register duplicate {} class ({})'.format(registry, name))
+            logger.warning(f'Duplicate {registry} class ({name}) detected. Using the last registered one {cls}')
         if force_extend and not issubclass(cls, base_cls):
             raise ValueError('Class {} must extend {}'.format(name, base_cls.__name__))
         if name in MODULE_REGISTRY[registry]:
-            raise ValueError('Cannot register class with duplicate class name ({})'.format(name))
+            logger.warning(f'Duplicate class name ({name}) detected. Using the last registered one {cls}')
         MODULE_REGISTRY[registry][name] = cls
         return cls
 
