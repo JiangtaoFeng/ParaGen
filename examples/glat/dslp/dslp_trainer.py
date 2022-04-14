@@ -55,7 +55,7 @@ class DSLPTrainer(GLATTrainer):
         dslp_logging_states = {f'dslp.{k}': v for k, v in dslp_logging_states.items()}
         logging_states.update(dslp_logging_states)
 
-        loss = loss + dslp_loss
+        loss = loss + dslp_loss * layer
 
         logging_states['total_loss'] = loss.data.item()
 
