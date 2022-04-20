@@ -1,5 +1,6 @@
 import importlib
 import json
+import sys
 import logging
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,11 @@ class Environment:
     def _init_log(self):
         FORMAT = f'%(asctime)s ｜ %(levelname)s | %(name)s |{f" RANK {self.rank} | " if not self.is_master() else " "}%(message)s'
         level = logging.INFO if self.is_master() else logging.WARN
-        logging.basicConfig(filename=self.log_filename, format=FORMAT, datefmt='%Y-%m-%d,%H:%M:%S', level=level)
+        logging.basicConfig(filename=self.log_filename,
+                            stream=sys.stdout,
+                            format=FORMAT,
+                            datefmt='%Y-%m-%d,%H:%M:%S',
+                            level=level)
 
     def _import_custom_lib(self, path):
         """
