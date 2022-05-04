@@ -36,7 +36,10 @@ class GLATTranslationTask(TranslationTask):
         """
         Build tokenizers for source and target languages
         """
-        self._tokenizer_configs[self._src]['preserved_tokens'] = ['len']
+        if self._share_vocab:
+            self._tokenizer_configs['preserved_tokens'] = ['len']
+        else:
+            self._tokenizer_configs[self._src]['preserved_tokens'] = ['len']
         super()._build_tokenizers()
 
     def _build_criterions(self):
