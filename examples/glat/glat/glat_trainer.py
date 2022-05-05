@@ -1,8 +1,4 @@
 import torch
-try:
-    import horovod.torch as hvd
-except:
-    pass
 from paragen.trainers.trainer import Trainer
 from paragen.trainers import register_trainer
 
@@ -15,8 +11,9 @@ class GLATTrainer(Trainer):
     Args:
         minus_p; glancing minus_p
     """
-    def __init__(self, minus_p=0.2, *args, **kwargs):
+    def __init__(self, max_context_p=0.5, minus_p=0.2, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._max_context_p = max_context_p
         self._minus_p = minus_p
 
         self._generator = None
@@ -85,7 +82,7 @@ class GLATTrainer(Trainer):
 
             bsz, seqlen = target.size()
             seqlen_i = (~target_padding_mask).sum(dim=-1)
-            context_p = 0.5 - self._minus_p * min(1, max(0, self._tot_step_cnt / self._max_steps))
+            context_p = self._max_context_p - self._minus_p * min(1, max(0, self._tot_step_cnt / self._max_steps))
             fusing_target_num = (neq_cnts.float() * context_p).long()
             fusing_target_mask = torch.ones_like(prediction)
             for li in range(bsz):

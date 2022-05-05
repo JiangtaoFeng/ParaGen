@@ -6,10 +6,6 @@ logger = logging.getLogger(__name__)
 
 from torch.utils.tensorboard import SummaryWriter
 import torch
-try:
-    import horovod.torch as hvd
-except:
-    pass
 
 from paragen.optim import build_optimizer
 from paragen.trainers import AbstractTrainer, register_trainer
@@ -75,7 +71,7 @@ class Trainer(AbstractTrainer):
                  reset_optimizer=False,
                  reset_trainer=False,
                  no_best_avg=True,
-                 enable_apex=False
+                 enable_apex=False,
                  ):
         super().__init__(max_epochs=max_epochs,
                          max_steps=max_steps,
@@ -159,7 +155,7 @@ class Trainer(AbstractTrainer):
     def _possible_restore_checkpoint(self):
         if self._save_model_dir is not None:
             if self._env.distributed_world > 1:
-                hvd.join()
+                self._env.join()
             if exists(self._save_model_dir):
                 if self._force_restart:
                     remove_tree(self._save_model_dir)
@@ -167,7 +163,7 @@ class Trainer(AbstractTrainer):
             else:
                 mkdir(self._save_model_dir)
             if self._env.distributed_world > 1:
-                hvd.join()
+                self._env.join()
             if self._restore_path is None and exists(f'{self._save_model_dir}/last.pt'):
                 self._restore_path = f'{self._save_model_dir}/last.pt'
 
@@ -184,17 +180,20 @@ class Trainer(AbstractTrainer):
         else:
             mkdir(self._tensorboard_dir)
 
-        if self._env.is_master() and (self._restore_path is not None or self._model.is_pretrained()):
+        if self._env.is_master() \
+            and (self._restore_path is not None or self._model.is_pretrained()) \
+            and (self._start_validate_epoch == 0 and self._start_validate_step == 0):
             self._eval()
 
         if self._env.distributed_world > 1:
-            hvd.join()
+            self._env.join()
 
     def train(self):
         """
         Training process
         """
         self.set_mode('train')
+        self._tot_step_cnt += 1
         self._epoch_cnt += 1
         while True:
             with self._epoch_context():
@@ -234,14 +233,12 @@ class Trainer(AbstractTrainer):
 
         yield
 
-        self._epoch_cnt += 1
-
         if self._save_epochs and self._epoch_cnt % self._save_epochs == 0:
             if self._env.is_master():
                 if self._save_model_dir:
                     self._save_last_model()
             if self._env.distributed_world > 1:
-                hvd.join()
+                self._env.join()
 
         # check if doing evaluation
         if self._validate_interval_epoch and \
@@ -255,7 +252,9 @@ class Trainer(AbstractTrainer):
                 if self._tensorboard_dir:
                     self._update_tensorboard('eval', eval_states)
             if self._env.distributed_world > 1:
-                hvd.join()
+                self._env.join()
+
+        self._epoch_cnt += 1
 
     def _safe_step(self, samples):
         """
@@ -351,7 +350,7 @@ class Trainer(AbstractTrainer):
         else:
             scaled_loss = possible_scale_loss(loss)
             scaled_loss.backward()
-            if self._env.distributed_world > 1 and self._env.fp16:
+            if self._env.distributed_world > 1 and self._env.fp16 and self._env.distributed in ['horovod', 'hvd']:
                 self._optimizer.optimizer.synchronize()
 
     @contextmanager
@@ -372,14 +371,6 @@ class Trainer(AbstractTrainer):
             self._token_count += real_ntokens
             self._current_logging_states['ntokens'] = real_ntokens
 
-        self._step_cnt += 1
-        self._tot_step_cnt += 1
-
-        self._dataloader.step_update(self._tot_step_cnt)
-        self._criterion.step_update(self._tot_step_cnt)
-        # lazy update for saving computation
-        self._optimizer.step_update(self._tot_step_cnt)
-
         # update logging on tqdm
         self._update_logging()
         if self._env.is_master() and self._tensorboard_dir:
@@ -396,7 +387,7 @@ class Trainer(AbstractTrainer):
                 if self._save_model_dir:
                     self._save_last_model()
             if self._env.distributed_world > 1:
-                hvd.join()
+                self._env.join()
 
         # check if doing evaluation
         if self._validate_interval_step and \
@@ -410,7 +401,15 @@ class Trainer(AbstractTrainer):
                 if self._tensorboard_dir:
                     self._update_tensorboard('eval', eval_states)
             if self._env.distributed_world > 1:
-                hvd.join()
+                self._env.join()
+
+        self._step_cnt += 1
+        self._tot_step_cnt += 1
+
+        self._dataloader.step_update(self._tot_step_cnt)
+        self._criterion.step_update(self._tot_step_cnt)
+        # lazy update for saving computation
+        self._optimizer.step_update(self._tot_step_cnt)
 
     def _update_logging(self):
         """
@@ -546,7 +545,8 @@ class Trainer(AbstractTrainer):
         assert self._env.is_master(), "only master process is allowed to save models"
         name_step = f'updates-{self._tot_step_cnt}.epochs-{self._epoch_cnt}'
         name_metric = '.'.join(
-            [('{}-{:.4f}' if isinstance(v, float) else '{}-{}').format(k, v) for k, v in kwargs.items()])
+            [('{}-{:.4f}' if isinstance(v, float) else '{}-{}').format(k, v)
+             for k, v in kwargs.items() if self._assess_by in k])
         name = f'{name_step}.{name_metric}'
 
         state_dict = self.state_dict()

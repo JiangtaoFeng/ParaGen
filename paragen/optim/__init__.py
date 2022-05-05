@@ -47,37 +47,62 @@ def build_optimizer(model, configs, enable_apex=False):
         cls = registry[name.lower()]
     else:
         import importlib
-        mod = importlib.import_module('torch.optim')
-        cls = getattr(mod, name)
+        cls = None
+        if name.startswith('Torch'):
+            available_optimizer_lib, name = ['torch.optim'], name[5:]
+        elif name.startswith('Huggingface'):
+            available_optimizer_lib, name = ['transformers'], name[11:]
+        else:
+            available_optimizer_lib = ['torch.optim', 'transformers']
+        for module in available_optimizer_lib:
+            try:
+                mod = importlib.import_module(module)
+                cls = getattr(mod, name)
+            except AttributeError as e:
+                pass
+            if cls is not None:
+                break
 
-    if 'no_decay' in configs:
-        named_parameters = model.named_parameters()
-        no_decay = configs.pop('no_decay')
-        weight_decay = configs.pop('weight_decay')
-        grouped_parameters = [
-            {'params': [p for n, p in named_parameters if not any(nd in n for nd in no_decay)],
-             'weight_decay': weight_decay},
-            {'params': [p for n, p in named_parameters if any(nd in n for nd in no_decay)],
-             'weight_decay': 0.0}
-        ]
-    else:
-        grouped_parameters = model.parameters()
-
-    optimizer = cls(grouped_parameters, lr=lr_scheduler.rate, **configs)
+    def get_grouped_parameters(model):
+        if 'no_decay' in configs:
+            named_parameters = model.named_parameters()
+            no_decay = configs.pop('no_decay')
+            weight_decay = configs.pop('weight_decay')
+            grouped_parameters = [
+                {'params': [p for n, p in named_parameters if not any(nd in n for nd in no_decay)],
+                 'weight_decay': weight_decay},
+                {'params': [p for n, p in named_parameters if any(nd in n for nd in no_decay)],
+                 'weight_decay': 0.0}
+            ]
+        else:
+            grouped_parameters = model.parameters()
+        return grouped_parameters
 
     env = Environment()
     if env.distributed_world > 1:
-        import horovod.torch as hvd
-        hvd_kwargs = {}
-        if 'update_frequency' in optimizer_kwargs:
-            hvd_kwargs['backward_passes_per_step'] = optimizer_kwargs['update_frequency']
-        if env.fp16 and not enable_apex:
-            hvd_kwargs['compression'] = hvd.Compression.fp16
-        optimizer = hvd.DistributedOptimizer(optimizer,
-                                             named_parameters=model.named_parameters(),
-                                             **hvd_kwargs)
-        hvd.broadcast_parameters(model.state_dict(), root_rank=0)
-        hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+        if env.distributed in ['horovod', 'hvd']:
+            optimizer = cls(get_grouped_parameters(model), lr=lr_scheduler.rate, **configs)
+            import horovod.torch as hvd
+            hvd_kwargs = {}
+            if 'update_frequency' in optimizer_kwargs:
+                hvd_kwargs['backward_passes_per_step'] = optimizer_kwargs['update_frequency']
+            if env.fp16 and not enable_apex:
+                hvd_kwargs['compression'] = hvd.Compression.fp16
+            optimizer = hvd.DistributedOptimizer(optimizer,
+                                                 named_parameters=model.named_parameters(),
+                                                 **hvd_kwargs)
+            hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+            hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+        elif env.distributed == 'ddp':
+            from torch.nn.parallel import DistributedDataParallel as DDP
+            grouped_parameters = get_grouped_parameters(
+                DDP(model, device_ids=[env.local_rank], output_device=env.local_rank)
+            )
+            optimizer = cls(grouped_parameters, lr=lr_scheduler.rate, **configs)
+        else:
+            raise NotImplementedError
+    else:
+        optimizer = cls(get_grouped_parameters(model), lr=lr_scheduler.rate, **configs)
 
     if enable_apex:
         from apex import amp
