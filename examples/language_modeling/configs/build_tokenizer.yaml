@@ -1,0 +1,6 @@
+class: Vocabulary
+data:
+  class: StreamingTextDataset
+  path: wikitext-103/wiki.train.tokens
+output_path: vocab
+threshold: -1

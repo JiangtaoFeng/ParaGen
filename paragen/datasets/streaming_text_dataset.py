@@ -15,8 +15,10 @@ class StreamingTextDataset(StreamingDataset):
         path: path to load the data
     """
 
-    def __init__(self,
-                 path,):
+    def __init__(
+        self,
+        path,
+    ):
         super().__init__(path)
 
     def build(self, collate_fn=None, preprocessed=False):

@@ -36,9 +36,9 @@ def parse_config():
                 tmp[k] = {}
             tmp = tmp[k]
         tmp[last_key] = v
+    if 'env' not in confs:
+        confs['env'] = {}
     if args.lib:
-        if 'env' not in confs:
-            confs['env'] = {}
         custom_libs = [args.lib]
         if 'custom_libs' in confs['env']:
             custom_libs.append(confs['env']['custom_libs'])

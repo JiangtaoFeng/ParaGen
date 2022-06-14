@@ -1,10 +1,24 @@
+from contextlib import contextmanager
 from typing import Dict, List
 import json
 import random
 
+import logging
+logger = logging.getLogger(__name__)
+
 import numpy as np
 
 from paragen.utils.io import SPACE_NORMALIZER
+
+
+@contextmanager
+def safe_data():
+    try:
+        yield
+    except StopIteration:
+        raise StopIteration
+    except Exception as e:
+        logger.warning(e)
 
 
 def split_tgt_sequence(tgt, bos, eos):

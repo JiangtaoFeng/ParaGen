@@ -1,0 +1,52 @@
+task:
+  class: LanguageModelingTask
+  mode: train
+  tokenizer:
+    class: Vocabulary
+    path: vocab
+  dataloader:
+    train:
+      class: StreamingDataLoader
+      batch_size: 128
+    valid:
+      class: StreamingDataLoader
+      batch_size: 128
+  data:
+    train:
+      class: StreamingConsecutiveTextDataset
+      path: wikitext-103/wiki.train.tokens
+      maxlen: &maxlen 512
+      split_mode: full
+    valid:
+      class: StreamingConsecutiveTextDataset
+      path: wikitext-103/wiki.valid.tokens
+      maxlen: *maxlen
+      split_mode: sentence
+  model:
+    class: HuggingfaceOPTModel
+  criterion:
+    class: CrossEntropy
+  trainer:
+    class: Trainer
+    optimizer:
+      class: AdamW
+      lr:
+        class: InverseSquareRootRateScheduler
+        rate: 5e-4
+        warmup_steps: 4000
+      clip_norm: 0.0
+      betas: (0.9, 0.98)
+      eps: 1e-6
+      weight_decay: 1e-2
+    no_best_avg: True
+    max_steps: 50000
+    validate_interval_step: 2000
+    assess_by: valid.criterion
+    assess_reverse: True
+    save_model_dir: checkpoints
+    log_interval: 50
+env:
+  device: cuda
+  fp16: True
+  no_progress_bar: True
+  debug: True
