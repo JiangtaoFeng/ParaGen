@@ -7,10 +7,10 @@ task:
   dataloader:
     train:
       class: StreamingDataLoader
-      batch_size: 128
+      batch_size: 8
     valid:
       class: StreamingDataLoader
-      batch_size: 128
+      batch_size: 8
   data:
     train:
       class: StreamingConsecutiveTextDataset
@@ -26,6 +26,7 @@ task:
     class: HuggingfaceOPTModel
   criterion:
     class: CrossEntropy
+    logging_metric: ppl
   trainer:
     class: Trainer
     optimizer:
@@ -34,6 +35,7 @@ task:
         class: InverseSquareRootRateScheduler
         rate: 5e-4
         warmup_steps: 4000
+      update_frequency: 16
       clip_norm: 0.0
       betas: (0.9, 0.98)
       eps: 1e-6
