@@ -24,6 +24,7 @@ task:
       split_mode: sentence
   model:
     class: HuggingfaceOPTModel
+    arch: facebook/opt-350m
   criterion:
     class: CrossEntropy
     logging_metric: ppl
