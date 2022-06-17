@@ -44,8 +44,8 @@ task:
     no_best_avg: True
     max_steps: 50000
     validate_interval_step: 2000
-    assess_by: valid.criterion
-    assess_reverse: True
+    save_last_k: 1
+    assess_by: none
     save_model_dir: checkpoints
     log_interval: 50
 env:
