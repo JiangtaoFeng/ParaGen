@@ -441,8 +441,8 @@ class Trainer(AbstractTrainer):
             eval_states.update(scores)
 
         if self._assess_by in eval_states \
-            and (self._assess_reverse and self._best > eval_states[self._assess_by]) \
-                or (not self._assess_reverse and self._best < eval_states[self._assess_by]):
+            and ((self._assess_reverse and self._best > eval_states[self._assess_by])
+                 or (not self._assess_reverse and self._best < eval_states[self._assess_by])):
             self._best = eval_states[self._assess_by]
             self._best_info = {f'best.{key}': value for key, value in eval_states.items()}
         logger.info(str_pipes(format_states(self._best_info)))
