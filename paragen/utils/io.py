@@ -3,6 +3,7 @@ from multiprocessing import Process
 import os
 import sys
 import re
+from threading import local
 import time
 import json
 import subprocess
@@ -20,7 +21,7 @@ TEMP_IO_SAVE_PATH = ""
 def init_io():
     global TEMP_IO_SAVE_PATH
     try:
-        TEMP_IO_SAVE_PATH = os.path.join(os.getenv('HOME'), '.cache/uio/')
+        TEMP_IO_SAVE_PATH = os.path.join(os.getenv('HOME'), '.cache_uio/')
     except Exception:
         TEMP_IO_SAVE_PATH = os.path.join(os.getcwd(), '.cache_uio/')
     if not os.path.exists(TEMP_IO_SAVE_PATH):
@@ -162,7 +163,7 @@ def listdir(path, return_files=True, return_dirs=False, retry=5):
         returncode = 1
         for i in range(retry):
             if path.startswith('hdfs:'):
-                output = subprocess.run('hadoop fs -ls {}'.format(path).split(), capture_output=True)
+                output = subprocess.run(f'hadoop fs -ls {path}'.split(), capture_output=True)
                 returncode = output.returncode
                 output = output.stdout
                 output = str(output, encoding='utf8').split('\n')
@@ -171,8 +172,16 @@ def listdir(path, return_files=True, return_dirs=False, retry=5):
                     retval += [getname(f) for f in output if f.startswith('-')]
                 if return_dirs:
                     retval += [getname(f) for f in output if f.startswith('d')]
+            elif path.startswith('s3:'):
+                path = path.rstrip('/')
+                output = subprocess.run(f'aws s3 ls {path}/'.split(), capture_output=True)
+                returncode = output.returncode
+                output = output.stdout
+                output = str(output, encoding='utf8').split('\n')
+                getname = lambda x: x.split()[-1].rstrip('/').split('/')[-1]
+                retval = [getname(f) for f in output if f != '']
             else:
-                output = subprocess.run('ls -A -H -l {}'.format(path).split(), capture_output=True)
+                output = subprocess.run(f'ls -A -H -l {path}'.split(), capture_output=True)
                 returncode = output.returncode
                 output = output.stdout
                 output = str(output, encoding='utf8').split('\n')
@@ -201,8 +210,12 @@ def isdir(path):
     :return:
     """
     if path.startswith('hdfs:'):
-        output = subprocess.run('hadoop fs -test -d {}'.format(path).split(), capture_output=True)
+        output = subprocess.run(f'hadoop fs -test -d {path}'.split(), capture_output=True)
         return output.returncode == 0
+    elif path.startswith('s3:'):
+        output = subprocess.run(f'aws s3 ls {path}'.split(), capture_output=True)
+        output = str(output.stdout, encoding='utf8')
+        return 'PRE' in output
     else:
         return os.path.isdir(path)
 
@@ -234,12 +247,15 @@ def cp(src, tgt, retry=5, wait=False):
         for i in range(retry):
             if exists(tgt):
                 remove(tgt, wait=True)
-            if src.startswith('hdfs:') and tgt.startswith('hdfs:'):
-                output = subprocess.run(["hadoop", "fs", "-cp", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif src.startswith('hdfs:') and not tgt.startswith('hdfs:'):
-                output = subprocess.run(["hadoop", "fs", "-get", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif not src.startswith('hdfs:') and tgt.startswith('hdfs:'):
-                output = subprocess.run(["hadoop", "fs", "-put", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if src.startswith('hdfs:') or tgt.startswith('hdfs:'):
+                if src.startswith('hdfs:') and tgt.startswith('hdfs:'):
+                    output = subprocess.run(["hadoop", "fs", "-cp", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                elif src.startswith('hdfs:') and not tgt.startswith('hdfs:'):
+                    output = subprocess.run(["hadoop", "fs", "-get", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                elif not src.startswith('hdfs:') and tgt.startswith('hdfs:'):
+                    output = subprocess.run(["hadoop", "fs", "-put", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif src.startswith('s3:') or tgt.startswith('s3:'):
+                output = subprocess.run(["aws", "s3", "cp", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 output = subprocess.run(["cp", src, tgt], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             returncode = output.returncode
@@ -269,6 +285,8 @@ def mkdir(path, retry=5, wait=True):
         for i in range(retry):
             if path.startswith('hdfs:'):
                 output = subprocess.run(["hadoop", "fs", "-mkdir", "-p", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif path.startswith('s3:'):
+                logger.warning('No need to make directory!')
             else:
                 output = subprocess.run(["mkdir", "-p", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             returncode = output.returncode
@@ -299,6 +317,8 @@ def remove(path, retry=5, wait=False):
             for i in range(retry):
                 if path.startswith('hdfs:'):
                     output = subprocess.run(['hadoop', 'fs', '-rm', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                elif path.startswith('s3:'):
+                    output = subprocess.run(['aws', 's3', 'rm', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 else:
                     output = subprocess.run(['rm', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 returncode = output.returncode
@@ -326,6 +346,11 @@ def exists(path):
     if path.startswith('hdfs:'):
         r = subprocess.run(['hadoop', 'fs', '-stat', path], capture_output=True)
         return True if r.returncode == 0 else False
+    elif path.startswith('s3:'):
+        splits = path.split('/')
+        dirname, filename = '/'.join(splits[:-1]), splits[-1]
+        filelist = listdir(dirname)
+        return filename in filelist
     else:
         return os.path.exists(path)
 
@@ -349,6 +374,8 @@ def remove_tree(path, retry=5, wait=True):
         for i in range(retry):
             if path.startswith('hdfs:'):
                 output = subprocess.run(['hadoop', 'fs', '-rm', '-r', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif path.startswith('s3'):
+                output = subprocess.run(['aws', 's3', 'rm', path, '--recursive'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 output = subprocess.run(['rm', '-r', path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             returncode = output.returncode
@@ -390,7 +417,7 @@ def utf8len(s):
 
 def _InputFileOpen(path, mode='r', encoding='utf8', timeout=-1, poll_interval=0.1, *args, **kwargs):
     try:
-        if path.startswith('hdfs:'):
+        if path.startswith('hdfs:') or path.startswith('s3:'):
             if 'localpath' in kwargs:
                 localpath = kwargs['localpath']
             else:
@@ -401,10 +428,10 @@ def _InputFileOpen(path, mode='r', encoding='utf8', timeout=-1, poll_interval=0.
                 fd = os.open(lockfilename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)  # lock
                 if os.path.exists(localpath):
                     os.remove(localpath)
-                p = subprocess.run("hadoop fs -get {} {}".format(path, localpath).split(),
-                                   capture_output=True)
-                if p.returncode:
-                    logger.warning(f'failed to open {path}, hadoop fs return code: {p.returncode}')
+                cp(path, localpath, wait=True)
+                if not exists(localpath):
+                    logger.info('fetching {path} fails')
+                    raise RuntimeError
                 os.close(fd)
                 os.remove(lockfilename)  # release lock
             else:
@@ -586,7 +613,7 @@ class _InputStream(TextIOBase):
 
 def _OutputFileOpen(path, localpath, mode='w', encoding='utf8'):
     try: 
-        if path.startswith('hdfs:'):
+        if path.startswith('hdfs:') or path.startswith('s3:'):
             if not os.path.exists(TEMP_IO_SAVE_PATH):
                 os.mkdir(TEMP_IO_SAVE_PATH)
         else:
@@ -610,7 +637,7 @@ class _OutputStream(TextIOBase):
     def __init__(self, path, encoding='utf8'):
         super().__init__()
         self._path = path
-        if self._path.startswith('hdfs:'):
+        if self._path.startswith('hdfs:') or self._path.startswith('s3:'):
             self._localpath = TEMP_IO_SAVE_PATH + re.sub(r'[^\w]', '', '{}_{}_w'.format(path, os.getpid()))
         else:
             self._localpath = path
@@ -628,7 +655,7 @@ class _OutputStream(TextIOBase):
         Close output stream
         """
         self._fout.close()
-        if self._path.startswith('hdfs:'):
+        if self._path.startswith('hdfs:') or self._path.startswith('s3:'):
             cp(self._localpath, self._path, wait=True)
             wait_until_exist(self._path)
         super().close()
@@ -883,7 +910,7 @@ class _OutputBytes(IOBase):
         Close output stream
         """
         self._fout.close()
-        if self._path.startswith('hdfs:'):
+        if self._path.startswith('hdfs:') or self._path.startswith('s3:'):
             cp(self._localpath, self._path, wait=True)
             wait_until_exist(self._path)
         super().close()
