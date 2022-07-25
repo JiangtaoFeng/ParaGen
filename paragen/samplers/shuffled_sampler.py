@@ -31,5 +31,5 @@ class ShuffleSampler(AbstractSampler):
         """
         Resetting sampler states / shuffle reading order for next round of iteration
         """
-        with random.seed(self._env.seed + epoch):
-            random.shuffle(self._permutation)
+        random.seed(self._env.seed + epoch)
+        random.shuffle(self._permutation)
