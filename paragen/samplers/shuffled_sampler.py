@@ -1,6 +1,8 @@
+import imp
 import random
 
 from paragen.samplers import AbstractSampler, register_sampler
+from paragen.utils.ops import local_seed
 from paragen.utils.runtime import Environment
 
 
@@ -30,5 +32,6 @@ class ShuffleSampler(AbstractSampler):
         """
         Resetting sampler states / shuffle reading order for next round of iteration
         """
-        random.seed(self._env.seed + epoch)
-        random.shuffle(self._permutation)
+        with local_seed(self._env.seed + epoch):
+            self._permutation = [_ for _ in range(len(self._data_source))]
+            random.shuffle(self._permutation)
