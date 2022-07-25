@@ -73,7 +73,7 @@ task:
       update_frequency: 4
     max_steps: 50000
     save_steps: 10000
-    save_model_dir: ckpts-tr-s2048t400
+    save_model_dir: ckpts-local-s2048t400
 env:
   device: cuda
   no_warning: True
