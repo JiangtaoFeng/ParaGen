@@ -1,4 +1,3 @@
-import imp
 import random
 
 from paragen.samplers import AbstractSampler, register_sampler
