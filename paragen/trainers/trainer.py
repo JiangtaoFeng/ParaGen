@@ -143,7 +143,7 @@ class Trainer(AbstractTrainer):
                                                        self._optimizer_configs,
                                                        enable_apex=self._enable_apex)
         self._update_frequency = self._optimizer.update_frequency
-        self._criterion._model = self._model  # temporary solution to ddp. Should be fixed in the next version by moving criterion initialization to Trainer.
+        self._criterion._model = self._model  # Temporary solution to ddp. Should be fixed in the next version by moving criterion initialization to Trainer.
 
         self._no_progress_bar = self._env.no_progress_bar or self._env.rank > 0
         if self._tensorboard_dir:
