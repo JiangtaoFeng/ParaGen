@@ -2,7 +2,6 @@ import imp
 import random
 
 from paragen.samplers import AbstractSampler, register_sampler
-from paragen.utils.ops import local_seed
 from paragen.utils.runtime import Environment
 
 
