@@ -3,7 +3,7 @@ task:
   mode: train
   src: src
   tgt: tgt
-  maxlen: (2048,400)
+  maxlen: (4096,400)
   preprocessed: True
   tokenizer:
     class: HuggingfaceTokenizer
@@ -13,7 +13,7 @@ task:
       class: InMemoryDataLoader
       sampler:
         class: ShuffleSampler
-        max_samples: 16
+        max_samples: 8
     valid:
       class: InMemoryDataLoader
       sampler:
@@ -31,7 +31,8 @@ task:
     class: Seq2Seq
     encoder:
       class: EfficientTransformerEncoder
-      arch: LocalAttention
+      arch: Lara
+      num_landmarks: 64
       wsize: 16
       num_layers: 6
       d_model: 512
@@ -41,7 +42,7 @@ task:
       activation: 'gelu'
       embed_layer_norm: True
       learn_pos: True
-      max_pos: 2048
+      max_pos: 4096
     decoder:
       class: TransformerDecoder
       num_layers: 6
@@ -70,10 +71,10 @@ task:
       betas: (0.9, 0.98)
       eps: 1e-8
       weight_decay: 1e-2
-      update_frequency: 4
+      update_frequency: 8
     max_steps: 50000
     save_steps: 10000
-    save_model_dir: ckpts-local-s2048t400
+    save_model_dir: ckpts-lara
 env:
   device: cuda
   no_warning: True
