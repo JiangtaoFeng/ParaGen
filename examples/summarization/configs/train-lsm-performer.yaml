@@ -73,7 +73,7 @@ task:
       update_frequency: 4
     max_steps: 50000
     save_steps: 10000
-    save_model_dir: ckpts-s4d
+    save_model_dir: ckpts-performer
 env:
   device: cuda
   no_warning: True
