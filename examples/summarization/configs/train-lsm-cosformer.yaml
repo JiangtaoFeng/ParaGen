@@ -72,7 +72,7 @@ task:
       update_frequency: 4
     max_steps: 50000
     save_steps: 10000
-    save_model_dir: ckpts-probsparse
+    save_model_dir: ckpts-cosformer
 env:
   device: cuda
   no_warning: True
