@@ -1,3 +1,5 @@
+import torch
+
 from paragen.models import register_model
 from paragen.models.abstract_encoder_decoder_model import AbstractEncoderDecoderModel
 from paragen.modules.decoders import create_decoder
@@ -143,6 +145,8 @@ class GLATModel(AbstractEncoderDecoderModel):
             decoder_embed = uniform_copy(self._encoder_embed(source),
                                          src_padding_mask,
                                          tgt_padding_mask)
+        elif self._decoder_input == 'zero':
+            decoder_embed = torch.zeros(tgt_padding_mask + (self._d_model, ), device=tgt_padding_mask.device)
         else:
             raise NotImplementedError
 
